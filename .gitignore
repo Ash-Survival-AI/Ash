@@ -71,3 +71,6 @@ APP_REVIEW_FORM*.md
 # Update via script in ios/configure_identity.sh
 ios/Runner.xcodeproj/project.pbxproj
 project.pbxproj
+# AI Docs
+CLAUDE.md
+./claude/
