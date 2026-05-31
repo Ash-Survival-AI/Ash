@@ -1,3 +1,5 @@
+enum VoicePersona { female, male }
+
 /// One iOS system TTS voice the user can select. Surface for the picker UI.
 /// `quality` is `enhanced` / `premium` / `default`; the iPhone usually has a
 /// few of each per locale, where Premium voices sound much closer to a real
@@ -8,6 +10,7 @@ class VoiceOption {
     required this.locale,
     required this.quality,
     required this.gender,
+    required this.identifier,
   });
 
   /// Unique identifier from `flutter_tts.getVoices()` — e.g. "Samantha",
@@ -23,6 +26,11 @@ class VoiceOption {
 
   /// Voice gender if the platform reports it: "male", "female", or empty.
   final String gender;
+
+  /// Stable iOS/macOS identifier, e.g. `com.apple.voice.premium.en-US.Ava`.
+  /// When present, using this gives iOS the exact high-quality asset instead
+  /// of asking it to infer from name + locale.
+  final String identifier;
 }
 
 /// Abstract voice I/O contract. The concrete implementation pairs Apple
@@ -93,6 +101,13 @@ abstract interface class VoiceService {
   /// The voice currently configured. Null when no preference is set
   /// (platform default applies).
   VoiceOption? get currentVoice;
+
+  /// Coarse live-mode voice profile. The service maps this to the best
+  /// installed natural voice for the device.
+  VoicePersona get voicePersona;
+
+  /// Switch between the app's curated male/female live voice profiles.
+  Future<void> setVoicePersona(VoicePersona persona);
 
   /// Switch to [voice] and persist the choice so the next launch picks it
   /// up automatically.

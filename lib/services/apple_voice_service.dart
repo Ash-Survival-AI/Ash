@@ -40,6 +40,7 @@ class AppleVoiceService implements VoiceService {
 
   // Voice preference state, loaded from NSUserDefaults on first init.
   VoiceOption? _currentVoice;
+  VoicePersona _voicePersona = VoicePersona.female;
   double _speechRate = 0.5;
   Duration _listeningPatience = const Duration(seconds: 5);
   // One-shot guard so the post-init auto-pick runs at most once per
@@ -50,6 +51,8 @@ class AppleVoiceService implements VoiceService {
   static const _kPrefVoiceLocale = 'tts_voice_locale';
   static const _kPrefVoiceQuality = 'tts_voice_quality';
   static const _kPrefVoiceGender = 'tts_voice_gender';
+  static const _kPrefVoiceIdentifier = 'tts_voice_identifier';
+  static const _kPrefVoicePersona = 'tts_voice_persona';
   static const _kPrefSpeechRate = 'tts_speech_rate';
   static const _kPrefListeningPatience = 'stt_listening_patience_s';
   // One-shot migration marker. Some early testers had the slider
@@ -146,25 +149,24 @@ class AppleVoiceService implements VoiceService {
         debugPrint('[voice] TTS initialize failed: $e');
       }
     }
-    // Auto-pick best voice — fire AFTER _ttsInitialized is true so the
-    // nested _ensureInit call inside getAvailableVoices short-circuits.
-    // Unawaited because the caller (often live-voice _start) doesn't
-    // need the voice picked before the mic comes up; the next
-    // utterance just uses whatever voice the picker lands on by the
-    // time it speaks. Guarded so the scan only runs once.
+    // Auto-pick best voice AFTER _ttsInitialized is true so the nested
+    // _ensureInit call inside getAvailableVoices short-circuits. Await this
+    // once so the first live-mode reply does not fall back to iOS's compact
+    // default voice.
     if (_ttsInitialized && !_voiceAutoPickAttempted) {
       _voiceAutoPickAttempted = true;
-      unawaited(_autoPickBestVoice());
+      await _autoPickBestVoice();
     }
   }
 
   Future<void> _autoPickBestVoice() async {
     try {
-      final picked = await _pickBestVoice();
+      if (_currentVoice != null) return;
+      final picked = await _pickBestVoice(_voicePersona);
       if (picked == null) return;
       _currentVoice = picked;
       try {
-        await _tts.setVoice({'name': picked.name, 'locale': picked.locale});
+        await _tts.setVoice(_voiceMap(picked));
       } catch (e) {
         debugPrint('[voice] auto-pick setVoice failed: $e');
         _currentVoice = null;
@@ -384,6 +386,9 @@ class AppleVoiceService implements VoiceService {
   VoiceOption? get currentVoice => _currentVoice;
 
   @override
+  VoicePersona get voicePersona => _voicePersona;
+
+  @override
   double get speechRate => _speechRate;
 
   @override
@@ -391,39 +396,18 @@ class AppleVoiceService implements VoiceService {
     await _ensureInit();
     if (!_ttsInitialized) return const [];
     try {
-      final raw = await _tts.getVoices;
-      if (raw is! List) return const [];
+      final shortlist = await _loadEnglishVoices(includeDefault: false);
 
-      // Strict: en-* AND (premium OR enhanced) only. Default-quality
-      // voices (robotic) are never returned — they're not useful to
-      // anyone and the picker UI has been removed anyway. Prefer en-US
-      // before other English variants. Dedupe by name.
-      final shortlist = <VoiceOption>[];
-      final seenNames = <String>{};
-      for (final v in raw) {
-        if (v is! Map) continue;
-        final name = (v['name'] as String?) ?? '';
-        final locale = (v['locale'] as String?) ?? '';
-        if (name.isEmpty) continue;
-        if (!locale.toLowerCase().startsWith('en')) continue;
-        final quality = (v['quality'] as String?)?.toLowerCase() ?? '';
-        if (quality != 'enhanced' && quality != 'premium') continue;
-        if (!seenNames.add(name)) continue;
-        shortlist.add(VoiceOption(
-          name: name,
-          locale: locale,
-          quality: quality,
-          gender: (v['gender'] as String?)?.toLowerCase() ?? '',
-        ));
-      }
-
-      // Sort: premium → enhanced; en-US before other en-*; ties by name.
-      int qRank(String q) => q == 'premium' ? 0 : 1;
-      int lRank(String l) => l.toLowerCase() == 'en-us' ? 0 : 1;
+      // Sort: female/male match → premium → enhanced; en-US before other
+      // en-*; ties by name. This keeps the list useful for any future picker
+      // while Settings exposes the simpler two-profile control.
       shortlist.sort((a, b) {
-        final byQ = qRank(a.quality).compareTo(qRank(b.quality));
+        final byGender = _genderRank(a, _voicePersona)
+            .compareTo(_genderRank(b, _voicePersona));
+        if (byGender != 0) return byGender;
+        final byQ = _qualityRank(a.quality).compareTo(_qualityRank(b.quality));
         if (byQ != 0) return byQ;
-        final byL = lRank(a.locale).compareTo(lRank(b.locale));
+        final byL = _localeRank(a.locale).compareTo(_localeRank(b.locale));
         if (byL != 0) return byL;
         return a.name.compareTo(b.name);
       });
@@ -434,15 +418,187 @@ class AppleVoiceService implements VoiceService {
     }
   }
 
-  /// Auto-pick the single best installed voice. Returns null if no
-  /// Premium/Enhanced en-* voice is installed — caller leaves the
-  /// platform default in place rather than picking a robotic one.
-  Future<VoiceOption?> _pickBestVoice() async {
-    final voices = await getAvailableVoices();
-    if (voices.isEmpty) return null;
-    // getAvailableVoices already sorts premium-en-US first, so the
-    // head of the list is the best choice.
-    return voices.first;
+  /// Auto-pick the best installed voice for [persona]. Premium/Enhanced
+  /// matching-gender voices win. If the device has no high-quality voice for
+  /// that gender, fall back to a non-novelty matching voice; if even that is
+  /// unavailable, use the best natural English voice on the device.
+  Future<VoiceOption?> _pickBestVoice(VoicePersona persona) async {
+    final natural = await _loadEnglishVoices(includeDefault: false);
+    final naturalMatch =
+        _bestFrom(natural.where((v) => _matchesPersona(v, persona)), persona);
+    if (naturalMatch != null) return naturalMatch;
+
+    final all = await _loadEnglishVoices(includeDefault: true);
+    final genderMatch =
+        _bestFrom(all.where((v) => _matchesPersona(v, persona)), persona);
+    if (genderMatch != null) return genderMatch;
+
+    return _bestFrom(natural, persona) ?? _bestFrom(all, persona);
+  }
+
+  Future<List<VoiceOption>> _loadEnglishVoices({
+    required bool includeDefault,
+  }) async {
+    final raw = await _tts.getVoices;
+    if (raw is! List) return const [];
+
+    final voices = <VoiceOption>[];
+    final seen = <String>{};
+    for (final v in raw) {
+      if (v is! Map) continue;
+      final name = (v['name'] as String?)?.trim() ?? '';
+      final locale = (v['locale'] as String?)?.trim() ?? '';
+      final identifier = (v['identifier'] as String?)?.trim() ?? '';
+      if (name.isEmpty) continue;
+      if (!locale.toLowerCase().startsWith('en')) continue;
+
+      final quality = (v['quality'] as String?)?.toLowerCase() ?? '';
+      if (!includeDefault && quality != 'enhanced' && quality != 'premium') {
+        continue;
+      }
+
+      final key = identifier.isNotEmpty ? identifier : '$name|$locale|$quality';
+      if (!seen.add(key)) continue;
+      voices.add(VoiceOption(
+        name: name,
+        locale: locale,
+        quality: quality,
+        gender: (v['gender'] as String?)?.toLowerCase() ?? '',
+        identifier: identifier,
+      ));
+    }
+    return voices;
+  }
+
+  VoiceOption? _bestFrom(
+    Iterable<VoiceOption> voices, [
+    VoicePersona? persona,
+  ]) {
+    final ranked = voices.toList();
+    if (ranked.isEmpty) return null;
+    ranked.sort((a, b) {
+      final personaA = persona == null ? 0 : _genderRank(a, persona);
+      final personaB = persona == null ? 0 : _genderRank(b, persona);
+      final byPersona = personaA.compareTo(personaB);
+      if (byPersona != 0) return byPersona;
+
+      final byNovelty = _noveltyPenalty(a).compareTo(_noveltyPenalty(b));
+      if (byNovelty != 0) return byNovelty;
+
+      final byQ = _qualityRank(a.quality).compareTo(_qualityRank(b.quality));
+      if (byQ != 0) return byQ;
+      final byLocale = _localeRank(a.locale).compareTo(_localeRank(b.locale));
+      if (byLocale != 0) return byLocale;
+      return a.name.compareTo(b.name);
+    });
+    return ranked.first;
+  }
+
+  bool _matchesPersona(VoiceOption voice, VoicePersona persona) {
+    final wanted = persona.name;
+    if (voice.gender == wanted) return true;
+    return _inferredGender(voice.name) == wanted;
+  }
+
+  int _genderRank(VoiceOption voice, VoicePersona persona) {
+    final wanted = persona.name;
+    if (voice.gender == wanted) return 0;
+    if (_inferredGender(voice.name) == wanted) return 1;
+    if (voice.gender.isEmpty || voice.gender == 'unspecified') return 2;
+    return 3;
+  }
+
+  int _qualityRank(String quality) {
+    switch (quality) {
+      case 'premium':
+        return 0;
+      case 'enhanced':
+        return 1;
+      case 'default':
+        return 3;
+      default:
+        return 4;
+    }
+  }
+
+  int _localeRank(String locale) {
+    final l = locale.toLowerCase();
+    if (l == 'en-us') return 0;
+    if (l.startsWith('en-')) return 1;
+    return 2;
+  }
+
+  int _noveltyPenalty(VoiceOption voice) {
+    final n = voice.name.toLowerCase();
+    const novelty = {
+      'albert',
+      'bad news',
+      'bahh',
+      'bells',
+      'boing',
+      'bubbles',
+      'cellos',
+      'deranged',
+      'good news',
+      'hysterical',
+      'junior',
+      'pipe organ',
+      'superstar',
+      'trinoids',
+      'whisper',
+      'zarvox',
+    };
+    if (novelty.contains(n)) return 100;
+    if (n == 'fred') return 20;
+    return 0;
+  }
+
+  String? _inferredGender(String name) {
+    final n = name.toLowerCase();
+    const female = {
+      'allison',
+      'ava',
+      'flo',
+      'joelle',
+      'karen',
+      'kathy',
+      'moira',
+      'nicky',
+      'samantha',
+      'serena',
+      'susan',
+      'tessa',
+      'veena',
+      'vicki',
+      'victoria',
+      'zoe',
+    };
+    const male = {
+      'aaron',
+      'alex',
+      'daniel',
+      'eddy',
+      'evan',
+      'fred',
+      'lee',
+      'nathan',
+      'oliver',
+      'reed',
+      'rishi',
+      'rocko',
+      'tom',
+    };
+    final base = n.split(' ').first;
+    if (female.contains(base)) return 'female';
+    if (male.contains(base)) return 'male';
+    return null;
+  }
+
+  Map<String, String> _voiceMap(VoiceOption voice) {
+    if (voice.identifier.isNotEmpty) {
+      return {'identifier': voice.identifier};
+    }
+    return {'name': voice.name, 'locale': voice.locale};
   }
 
   @override
@@ -450,16 +606,49 @@ class AppleVoiceService implements VoiceService {
     await _ensureInit();
     if (!_ttsInitialized) return;
     try {
-      await _tts.setVoice({'name': voice.name, 'locale': voice.locale});
+      await _tts.setVoice(_voiceMap(voice));
       _currentVoice = voice;
+      if (_matchesPersona(voice, VoicePersona.male)) {
+        _voicePersona = VoicePersona.male;
+      } else if (_matchesPersona(voice, VoicePersona.female)) {
+        _voicePersona = VoicePersona.female;
+      }
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_kPrefVoiceName, voice.name);
-      await prefs.setString(_kPrefVoiceLocale, voice.locale);
-      await prefs.setString(_kPrefVoiceQuality, voice.quality);
-      await prefs.setString(_kPrefVoiceGender, voice.gender);
+      await prefs.setString(_kPrefVoicePersona, _voicePersona.name);
+      await _persistVoicePrefs(prefs, voice);
     } catch (e) {
       debugPrint('[voice] setVoice failed: $e');
     }
+  }
+
+  @override
+  Future<void> setVoicePersona(VoicePersona persona) async {
+    _voicePersona = persona;
+    await _ensureInit();
+    _voicePersona = persona;
+    if (!_ttsInitialized) return;
+    try {
+      final picked = await _pickBestVoice(persona);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_kPrefVoicePersona, persona.name);
+      if (picked == null) return;
+      await _tts.setVoice(_voiceMap(picked));
+      _currentVoice = picked;
+      await _persistVoicePrefs(prefs, picked);
+    } catch (e) {
+      debugPrint('[voice] setVoicePersona failed: $e');
+    }
+  }
+
+  Future<void> _persistVoicePrefs(
+    SharedPreferences prefs,
+    VoiceOption voice,
+  ) async {
+    await prefs.setString(_kPrefVoiceName, voice.name);
+    await prefs.setString(_kPrefVoiceLocale, voice.locale);
+    await prefs.setString(_kPrefVoiceQuality, voice.quality);
+    await prefs.setString(_kPrefVoiceGender, voice.gender);
+    await prefs.setString(_kPrefVoiceIdentifier, voice.identifier);
   }
 
   @override
@@ -502,7 +691,7 @@ class AppleVoiceService implements VoiceService {
     try {
       // Temporarily switch to the preview voice. Don't persist — the user
       // hasn't committed to it yet. If they pick it, setVoice() will run.
-      await _tts.setVoice({'name': voice.name, 'locale': voice.locale});
+      await _tts.setVoice(_voiceMap(voice));
       await _tts.speak(text);
       // After the preview ends, restore the persisted voice (the
       // completion handler will eventually fire, but we proactively set
@@ -527,7 +716,7 @@ class AppleVoiceService implements VoiceService {
     final v = _currentVoice;
     if (v != null) {
       try {
-        await _tts.setVoice({'name': v.name, 'locale': v.locale});
+        await _tts.setVoice(_voiceMap(v));
       } catch (_) {}
     }
   }
@@ -541,14 +730,41 @@ class AppleVoiceService implements VoiceService {
     // of _ensureInit, when the flag is already true.
     try {
       final prefs = await SharedPreferences.getInstance();
+      final savedPersona = prefs.getString(_kPrefVoicePersona);
+      _voicePersona = savedPersona == VoicePersona.male.name
+          ? VoicePersona.male
+          : VoicePersona.female;
+
       final rate = prefs.getDouble(_kPrefSpeechRate);
       _speechRate = (rate ?? 0.5).clamp(0.3, 0.7);
       await _tts.setSpeechRate(_speechRate);
+
+      final savedName = prefs.getString(_kPrefVoiceName);
+      final savedLocale = prefs.getString(_kPrefVoiceLocale);
+      if (savedName != null &&
+          savedName.isNotEmpty &&
+          savedLocale != null &&
+          savedLocale.isNotEmpty) {
+        final saved = VoiceOption(
+          name: savedName,
+          locale: savedLocale,
+          quality: prefs.getString(_kPrefVoiceQuality) ?? '',
+          gender: prefs.getString(_kPrefVoiceGender) ?? '',
+          identifier: prefs.getString(_kPrefVoiceIdentifier) ?? '',
+        );
+        try {
+          await _tts.setVoice(_voiceMap(saved));
+          _currentVoice = saved;
+        } catch (e) {
+          debugPrint('[voice] saved voice unavailable: $e');
+          _currentVoice = null;
+        }
+      }
+
       // One-time wipe of stale persisted patience values from early
       // testing so the slider snaps back to the 5s default. Runs once
       // per device per migration marker.
-      final migrated =
-          prefs.getBool(_kPrefPatienceDefaultMigration) ?? false;
+      final migrated = prefs.getBool(_kPrefPatienceDefaultMigration) ?? false;
       if (!migrated) {
         await prefs.remove(_kPrefListeningPatience);
         await prefs.setBool(_kPrefPatienceDefaultMigration, true);
