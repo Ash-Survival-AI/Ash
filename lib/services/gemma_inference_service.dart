@@ -681,9 +681,12 @@ class GemmaInferenceService implements InferenceService {
     _stopRequested = false;
 
     final usesImage = imageBytes != null;
+    final mushroomLensActive =
+        _lensPackIds?.contains(MushroomSafety.packId) ?? false;
     final mushroomSafetyMode = MushroomSafety.shouldActivate(
       prompt: prompt,
       usesImage: usesImage,
+      lensActive: mushroomLensActive,
     );
     debugPrint('[ash] query start: chatId=$chatId image=$usesImage '
         'promptLen=${prompt.length} rag=${settings.useRag} '

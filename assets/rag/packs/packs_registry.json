@@ -322,7 +322,8 @@
     "sourceFile": "mushroom-safety.md",
     "fileSizeBytes": 42837,
     "embeddingModelVersion": "all-MiniLM-L6-v2-r5",
-    "tier": "essential"
+    "tier": "essential",
+    "summary": "Wild mushroom photo triage, ingestion response, and poison-control guidance."
   },
   {
     "packId": "needles-and-sharps-handling",

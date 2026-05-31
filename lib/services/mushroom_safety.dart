@@ -58,6 +58,12 @@ class MushroomVisionFinding {
 }
 
 abstract final class MushroomSafety {
+  static const packId = 'mushroom-safety';
+
+  static const starterPrompt =
+      'I found a wild mushroom. Help me assess the risk. I can attach photos '
+      'of the cap, underside, stem, base, and where it was growing.';
+
   static final RegExp _mushroomTerms = RegExp(
     r'\b(mushroom|mushrooms|fungus|fungi|fungal|toadstool|gill|gills|spore|spores|amanita|death cap|destroying angel|morel|false morel|chanterelle|bolete|puffball|forage|foraged|foraging)\b',
     caseSensitive: false,
@@ -76,8 +82,10 @@ abstract final class MushroomSafety {
   static bool shouldActivate({
     required String prompt,
     required bool usesImage,
+    bool lensActive = false,
   }) {
     final text = prompt.trim();
+    if (lensActive) return true;
     if (text.isEmpty) return false;
 
     final hasMushroomTerm = _mushroomTerms.hasMatch(text);

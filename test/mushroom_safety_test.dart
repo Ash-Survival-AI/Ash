@@ -42,6 +42,17 @@ void main() {
         isFalse,
       );
     });
+
+    test('activates when the mushroom lens is selected', () {
+      expect(
+        MushroomSafety.shouldActivate(
+          prompt: 'What do you see in this image?',
+          usesImage: true,
+          lensActive: true,
+        ),
+        isTrue,
+      );
+    });
   });
 
   test('augmented prompt forbids photo-only edibility claims', () {

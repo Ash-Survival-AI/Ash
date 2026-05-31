@@ -34,6 +34,8 @@ photo, an LLM answer, or a computer vision suggestion.
 
 - Adds a mushroom safety mode in `GemmaInferenceService`.
 - Detects mushroom/edibility/ingestion prompts and image edibility questions.
+- Adds a Home entry point that opens a chat scoped to the Mushroom Safety pack;
+  that lens also activates mushroom safety mode for generic image prompts.
 - Injects a safety operating context before Gemma answers.
 - Calls a `MushroomVisionAnalyzer` seam before image answers. The current
   implementation intentionally reports that no certified offline mushroom
