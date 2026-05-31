@@ -32,32 +32,41 @@ class SettingsScreen extends StatefulWidget {
   final VoidCallback onBack;
   final AcceleratorChoice accelerator;
   final ValueChanged<AcceleratorChoice> onAcceleratorChanged;
+
   /// For the Voice section — list available iOS voices, preview, save the
   /// user's pick. Settings owns the picker UI; the service owns the
   /// persistence (NSUserDefaults under the hood).
   final VoiceService voiceService;
+
   /// Whether Multi-Token Prediction (speculative decoding) is enabled on
   /// the inference engine. Engine-level toggle — flipping it closes the
   /// engine and re-warms.
   final bool speculativeDecoding;
+
   /// Called when the user flips the MTP toggle. Host runs
   /// `service.setSpeculativeDecoding(...)` + re-warms; the engine-reload
   /// banner appears for ~5s while the new engine builds.
   final ValueChanged<bool> onSpeculativeDecodingChanged;
+
   /// Variant currently loaded into the engine.
   final LlmModel activeLlmModel;
+
   /// Variants present on disk (subset of [LlmModel.values]).
   final Set<LlmModel> installedLlmModels;
+
   /// Tap on an already-installed variant — host should call setActiveLlmModel
   /// and surface the engine-reload banner.
   final ValueChanged<LlmModel> onSwitchLlmModel;
+
   /// Tap on an uninstalled variant — host should drop into the download flow
   /// for that variant (will navigate to AppStage.downloading internally).
   final ValueChanged<LlmModel> onInstallLlmModel;
+
   /// Tap the trash icon on an installed-but-inactive variant. The host is
   /// responsible for confirming + calling service.deleteModel + refreshing
   /// the installed set.
   final ValueChanged<LlmModel> onDeleteLlmModel;
+
   /// Wipe all conversations. Host handles confirmation, state update.
   final VoidCallback onClearConversations;
 
@@ -66,6 +75,17 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  bool _voiceChanging = false;
+  bool _voicePreviewing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.voiceService.getStatus().then((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = ash(context);
@@ -75,141 +95,128 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return ColoredBox(
       color: c.bg,
       child: SafeArea(
-      child: Column(
-        children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 20, 0),
-            child: Row(
-              children: [
-                IconBtn(
-                  icon: Icons.arrow_back,
-                  onTap: widget.onBack,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Settings',
-                  style: TextStyle(
-                    color: c.text,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w400,
+        child: Column(
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 20, 0),
+              child: Row(
+                children: [
+                  IconBtn(
+                    icon: Icons.arrow_back,
+                    onTap: widget.onBack,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 8),
+                  Text(
+                    'Settings',
+                    style: TextStyle(
+                      color: c.text,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
 
-          // Scrollable content
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
-              children: [
-                // ── Model ──────────────────────────────────────────────
-                const SectionLabel(label: 'Model'),
-                const SizedBox(height: 4),
-                Glass(
-                  radius: 18,
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Column(
-                    children: [
-                      _buildRow(
-                        c,
-                        label: 'Active model',
-                        value: widget.activeLlmModel.displayName,
-                        chevron: true,
-                        onTap: _openModelPicker,
-                      ),
-                      _divider(c),
-                      _buildAcceleratorRow(c),
-                      _divider(c),
-                      _buildSpeculativeRow(c),
-                    ],
+            // Scrollable content
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
+                children: [
+                  // ── Model ──────────────────────────────────────────────
+                  const SectionLabel(label: 'Model'),
+                  const SizedBox(height: 4),
+                  Glass(
+                    radius: 18,
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Column(
+                      children: [
+                        _buildRow(
+                          c,
+                          label: 'Active model',
+                          value: widget.activeLlmModel.displayName,
+                          chevron: true,
+                          onTap: _openModelPicker,
+                        ),
+                        _divider(c),
+                        _buildAcceleratorRow(c),
+                        _divider(c),
+                        _buildSpeculativeRow(c),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-                // Sampling controls (RAG / temperature / top-K / top-P /
-                // max tokens) are per-conversation — accessed via the tune
-                // icon in the chat header, not from this global page.
+                  // Sampling controls (RAG / temperature / top-K / top-P /
+                  // max tokens) are per-conversation — accessed via the tune
+                  // icon in the chat header, not from this global page.
 
-                // ── Voice ──────────────────────────────────────────────
-                const SectionLabel(label: 'Voice'),
-                const SizedBox(height: 4),
-                Glass(
-                  radius: 18,
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Column(
-                    children: [
-                      // Read-only voice display. Auto-picked at launch from
-                      // installed Enhanced/Premium voices; the user no
-                      // longer chooses. Default (robotic) voices are never
-                      // selected — if no quality voice is installed this
-                      // row shows "System default" and TTS falls back to
-                      // whatever iOS picks.
-                      _buildRow(
-                        c,
-                        label: 'Reply voice',
-                        value: widget.voiceService.currentVoice?.name ??
-                            'System default',
-                        chevron: false,
-                        onTap: null,
-                      ),
-                      _divider(c),
-                      _buildSpeechRateRow(c),
-                      _divider(c),
-                      _buildListeningPatienceRow(c),
-                    ],
+                  // ── Voice ──────────────────────────────────────────────
+                  const SectionLabel(label: 'Voice'),
+                  const SizedBox(height: 4),
+                  Glass(
+                    radius: 18,
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Column(
+                      children: [
+                        _buildVoicePersonaRow(c),
+                        _divider(c),
+                        _buildSpeechRateRow(c),
+                        _divider(c),
+                        _buildListeningPatienceRow(c),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-                // ── Storage ────────────────────────────────────────────
-                const SectionLabel(label: 'Storage'),
-                const SizedBox(height: 4),
-                Glass(
-                  radius: 18,
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Column(
-                    children: [
-                      _buildRow(
-                        c,
-                        label: 'Clear conversations',
-                        danger: true,
-                        onTap: _confirmClearConversations,
-                      ),
-                    ],
+                  // ── Storage ────────────────────────────────────────────
+                  const SectionLabel(label: 'Storage'),
+                  const SizedBox(height: 4),
+                  Glass(
+                    radius: 18,
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Column(
+                      children: [
+                        _buildRow(
+                          c,
+                          label: 'Clear conversations',
+                          danger: true,
+                          onTap: _confirmClearConversations,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-                // ── About ──────────────────────────────────────────────
-                const SectionLabel(label: 'About'),
-                const SizedBox(height: 4),
-                Glass(
-                  radius: 18,
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Column(
-                    children: [
-                      _buildRow(
-                        c,
-                        label: 'View on GitHub',
-                        chevron: true,
-                        onTap: _openGitHub,
-                      ),
-                      _divider(c),
-                      _buildRow(
-                        c,
-                        label: 'Version',
-                        value: '1.4.0',
-                      ),
-                    ],
+                  // ── About ──────────────────────────────────────────────
+                  const SectionLabel(label: 'About'),
+                  const SizedBox(height: 4),
+                  Glass(
+                    radius: 18,
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Column(
+                      children: [
+                        _buildRow(
+                          c,
+                          label: 'View on GitHub',
+                          chevron: true,
+                          onTap: _openGitHub,
+                        ),
+                        _divider(c),
+                        _buildRow(
+                          c,
+                          label: 'Version',
+                          value: '1.4.0',
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
@@ -402,6 +409,107 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (confirm == true) widget.onDeleteLlmModel(m);
   }
 
+  Widget _buildVoicePersonaRow(AshColors c) {
+    final voice = widget.voiceService.currentVoice;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Live voice',
+                  style: TextStyle(color: c.text, fontSize: 15),
+                ),
+              ),
+              if (voice != null)
+                Flexible(
+                  child: Text(
+                    voice.name,
+                    textAlign: TextAlign.right,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: c.textMuted, fontSize: 13),
+                  ),
+                ),
+              if (voice != null) ...[
+                const SizedBox(width: 6),
+                IconButton(
+                  tooltip: 'Preview voice',
+                  visualDensity: VisualDensity.compact,
+                  iconSize: 20,
+                  color: c.textMuted,
+                  onPressed: _voicePreviewing
+                      ? null
+                      : () async {
+                          setState(() => _voicePreviewing = true);
+                          await widget.voiceService.previewVoice(
+                            voice,
+                            'Ready when you are.',
+                          );
+                          if (mounted) {
+                            setState(() => _voicePreviewing = false);
+                          }
+                        },
+                  icon: const Icon(Icons.volume_up_outlined),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<VoicePersona>(
+              showSelectedIcon: false,
+              selected: {widget.voiceService.voicePersona},
+              onSelectionChanged: _voiceChanging
+                  ? null
+                  : (selection) async {
+                      final next = selection.first;
+                      if (next == widget.voiceService.voicePersona) return;
+                      setState(() => _voiceChanging = true);
+                      await widget.voiceService.setVoicePersona(next);
+                      if (mounted) {
+                        setState(() => _voiceChanging = false);
+                      }
+                    },
+              style: ButtonStyle(
+                backgroundColor: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.selected)) {
+                    return c.accentSoft;
+                  }
+                  return Colors.transparent;
+                }),
+                foregroundColor: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.selected)) return c.text;
+                  return c.textMuted;
+                }),
+                side: WidgetStatePropertyAll(BorderSide(color: c.border)),
+                shape: WidgetStatePropertyAll(
+                  RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              segments: const [
+                ButtonSegment(
+                  value: VoicePersona.female,
+                  label: Text('Female'),
+                ),
+                ButtonSegment(
+                  value: VoicePersona.male,
+                  label: Text('Male'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSpeechRateRow(AshColors c) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
@@ -456,9 +564,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildListeningPatienceRow(AshColors c) {
-    final seconds = widget.voiceService.listeningPatience.inSeconds
-        .clamp(3, 10)
-        .toDouble();
+    final seconds =
+        widget.voiceService.listeningPatience.inSeconds.clamp(3, 10).toDouble();
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       child: Column(
@@ -655,6 +762,7 @@ class _ModelOptionRow extends StatelessWidget {
   final bool isActive;
   final bool isInstalled;
   final VoidCallback onTap;
+
   /// Tap on the trash icon. Only rendered for installed-but-inactive
   /// variants (active models can't be deleted — user must switch first to
   /// avoid leaving the engine in a no-active-model state).
@@ -802,4 +910,3 @@ class _AcceleratorToggle extends StatelessWidget {
     );
   }
 }
-
