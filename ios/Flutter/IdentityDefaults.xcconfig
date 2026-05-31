@@ -1,0 +1,6 @@
+// Default signing values used before a local identity is configured.
+// Run ios/configure_identity.sh to generate ignored local overrides in
+// ios/Flutter/Identity.xcconfig for device builds.
+ASH_DEVELOPMENT_TEAM =
+ASH_BUNDLE_IDENTIFIER = com.example.ash
+#include? "Identity.xcconfig"
