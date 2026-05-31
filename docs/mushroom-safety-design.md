@@ -38,12 +38,25 @@ photo, an LLM answer, or a computer vision suggestion.
   that lens also activates mushroom safety mode for generic image prompts.
 - Injects a safety operating context before Gemma answers.
 - Calls a `MushroomVisionAnalyzer` seam before image answers. The current
-  implementation intentionally reports that no certified offline mushroom
-  classifier is bundled, so the LLM cannot invent a model result.
+  implementation runs the public iNaturalist Small Vision CoreML model on iOS
+  and feeds its limited candidate-label observations into the LLM.
 - Adds an essential `Mushroom Safety` RAG pack for poison-control triage,
   evidence gathering, myths, symptoms, children, pets, lookalikes, and CV
   limitations.
 - Adds tests for activation and prompt augmentation.
+
+## Bundled CV Model
+
+The PR bundles `INatVision_Small_2_fact256_8bit.mlmodel` from the iNaturalist
+`model-files` v25.01.15 release. This model is MIT-licensed, about 21 MB, and
+compiled by Xcode into the iOS app. It outputs 507 public leaf-class scores.
+
+This is not a general mushroom model. In the public taxonomy, fungi coverage is
+limited to a handful of fungi/lichen/slime-mold labels such as `Amanita
+muscaria`, `Schizophyllum commune`, `Tremella mesenterica`, and several
+lichens. Ash therefore treats the model as a narrow candidate-label signal:
+useful if a dangerous or relevant label appears, but never meaningful as a
+negative result and never an edibility decision.
 
 ## Future CV Model Bar
 

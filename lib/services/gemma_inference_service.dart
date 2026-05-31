@@ -51,7 +51,7 @@ class GemmaInferenceService implements InferenceService {
   GemmaInferenceService({
     MushroomVisionAnalyzer? mushroomVisionAnalyzer,
   }) : _mushroomVisionAnalyzer =
-            mushroomVisionAnalyzer ?? const NoopMushroomVisionAnalyzer();
+            mushroomVisionAnalyzer ?? const INaturalistMushroomVisionAnalyzer();
 
   // --- Constants ---
 

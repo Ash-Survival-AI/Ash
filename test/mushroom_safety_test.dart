@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:ash/services/mushroom_safety.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -63,6 +65,22 @@ void main() {
 
     expect(prompt, contains('Do not tell the user'));
     expect(prompt, contains('Poison Help'));
-    expect(prompt, contains('No offline mushroom edibility classifier'));
+    expect(
+      prompt,
+      contains('No certified offline mushroom edibility classifier'),
+    );
+  });
+
+  test('iNaturalist analyzer reports unavailable off iOS', () async {
+    final finding = await const INaturalistMushroomVisionAnalyzer().analyze(
+      Uint8List.fromList([0]),
+    );
+
+    expect(finding.modelName, contains('iNaturalist'));
+    expect(finding.modelAvailable, isFalse);
+    expect(
+      finding.toPromptBlock(),
+      contains('Do not infer edibility, toxicity, or species certainty'),
+    );
   });
 }

@@ -1,11 +1,13 @@
-import 'dart:typed_data';
+import 'dart:io';
+
+import 'package:flutter/services.dart';
 
 /// Result from a mushroom-specific vision model.
 ///
-/// The current app build does not bundle a certified mushroom edibility
-/// classifier. Keeping this as a small interface makes the model call explicit
-/// in the inference path, while preventing the LLM from inventing a detector
-/// result when no vetted model is available.
+/// The bundled iNaturalist model is a limited visual candidate-label model, not
+/// a certified mushroom edibility classifier. Keeping this as a small interface
+/// makes the model call explicit in the inference path, while preventing the
+/// LLM from inventing detector results.
 abstract interface class MushroomVisionAnalyzer {
   Future<MushroomVisionFinding> analyze(Uint8List imageBytes);
 }
@@ -19,13 +21,157 @@ class NoopMushroomVisionAnalyzer implements MushroomVisionAnalyzer {
       modelName: 'none',
       modelAvailable: false,
       observations: [
-        'No offline mushroom edibility classifier is bundled in this build.',
+        'No certified offline mushroom edibility classifier is bundled in this build.',
       ],
       limitations: [
         'Do not infer edibility, toxicity, or species certainty from this tool.',
         'Use the photo only for visible feature triage and next-step guidance.',
       ],
     );
+  }
+}
+
+class INaturalistMushroomVisionAnalyzer implements MushroomVisionAnalyzer {
+  const INaturalistMushroomVisionAnalyzer();
+
+  static const _channel = MethodChannel('ash/mushroom_vision');
+  static const _modelName = 'iNaturalist Small Vision v25.01.15';
+
+  static const _fungiTaxaByClassId = <int, ({String name, String note})>{
+    39: (
+      name: 'Xanthoria parietina',
+      note:
+          'lichen label in the public iNaturalist model, not an edibility signal',
+    ),
+    53: (
+      name: 'Amanita muscaria',
+      note: 'toxic mushroom warning signal; do not eat',
+    ),
+    113: (
+      name: 'Flavoparmelia caperata',
+      note:
+          'lichen label in the public iNaturalist model, not an edibility signal',
+    ),
+    212: (
+      name: 'Schizophyllum commune',
+      note:
+          'fungus label in the public iNaturalist model, not an edibility signal',
+    ),
+    248: (
+      name: 'Tremella mesenterica',
+      note:
+          'fungus label in the public iNaturalist model, not an edibility signal',
+    ),
+    322: (
+      name: 'Parmelia sulcata',
+      note:
+          'lichen label in the public iNaturalist model, not an edibility signal',
+    ),
+    485: (
+      name: 'Fuligo septica',
+      note:
+          'slime mold label in the public iNaturalist model, not an edibility signal',
+    ),
+  };
+
+  @override
+  Future<MushroomVisionFinding> analyze(Uint8List imageBytes) async {
+    if (!Platform.isIOS) {
+      return const MushroomVisionFinding(
+        modelName: _modelName,
+        modelAvailable: false,
+        observations: [
+          'The bundled iNaturalist CoreML classifier runs on iOS only.',
+        ],
+        limitations: [
+          'Do not infer edibility, toxicity, or species certainty from this tool.',
+          'Use the photo only for visible feature triage and next-step guidance.',
+        ],
+      );
+    }
+
+    try {
+      final result = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+        'analyze',
+        {
+          'imageBytes': imageBytes,
+          'topK': 20,
+        },
+      );
+      if (result == null || result['modelAvailable'] != true) {
+        return MushroomVisionFinding(
+          modelName: _modelName,
+          modelAvailable: false,
+          observations: [
+            'The bundled iNaturalist CoreML classifier did not run.',
+            if (result?['error'] case final String error) error,
+          ],
+          limitations: const [
+            'Do not infer edibility, toxicity, or species certainty from this tool.',
+            'Use the photo only for visible feature triage and next-step guidance.',
+          ],
+        );
+      }
+
+      final top = (result['top'] as List? ?? const [])
+          .whereType<Map>()
+          .map((m) => (
+                classId: (m['classId'] as num).toInt(),
+                score: (m['score'] as num).toDouble(),
+              ))
+          .toList();
+      final fungiCandidates = [
+        for (final candidate in top)
+          if (_fungiTaxaByClassId[candidate.classId] case final taxon?)
+            (
+              classId: candidate.classId,
+              score: candidate.score,
+              name: taxon.name,
+              note: taxon.note,
+            ),
+      ];
+
+      final observations = <String>[
+        'Ran $_modelName, the public MIT-licensed iNaturalist small vision model with 507 leaf taxa.',
+        'Its public fungi coverage is very narrow, so it can only provide limited candidate-label signals.',
+      ];
+
+      if (fungiCandidates.isEmpty) {
+        observations.add(
+          'No fungi/lichen/slime-mold label from the public iNaturalist subset appeared in the top ${top.length} visual candidates; this does not rule out a mushroom.',
+        );
+      } else {
+        for (final candidate in fungiCandidates.take(3)) {
+          observations.add(
+            'Limited iNaturalist candidate: ${candidate.name} '
+            '(class ${candidate.classId}, ${(candidate.score * 100).toStringAsFixed(1)}% model score) — ${candidate.note}.',
+          );
+        }
+      }
+
+      return MushroomVisionFinding(
+        modelName: _modelName,
+        modelAvailable: true,
+        observations: observations,
+        limitations: const [
+          'This is not an edible/poisonous classifier and must not be used to decide whether to eat a mushroom.',
+          'The public iNaturalist small model is a limited taxa model; many mushrooms are not represented.',
+          'Image-only predictions can miss lookalikes, age, habitat, substrate, spore print, odor, location, and other expert identification evidence.',
+        ],
+      );
+    } catch (e) {
+      return MushroomVisionFinding(
+        modelName: _modelName,
+        modelAvailable: false,
+        observations: [
+          'The bundled iNaturalist CoreML classifier failed to run: $e',
+        ],
+        limitations: const [
+          'Do not infer edibility, toxicity, or species certainty from this tool.',
+          'Use the photo only for visible feature triage and next-step guidance.',
+        ],
+      );
+    }
   }
 }
 
@@ -163,7 +309,7 @@ abstract final class MushroomSafety {
     modelName: 'none',
     modelAvailable: false,
     observations: [
-      'No offline mushroom edibility classifier is bundled in this build.',
+      'No certified offline mushroom edibility classifier is bundled in this build.',
     ],
     limitations: [
       'Do not infer edibility, toxicity, or species certainty from this tool.',
