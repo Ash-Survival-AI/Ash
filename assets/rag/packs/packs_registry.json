@@ -315,6 +315,16 @@
     "embeddingModelVersion": "all-MiniLM-L6-v2-r5"
   },
   {
+    "packId": "mushroom-safety",
+    "packName": "Mushroom Safety",
+    "version": "1.0",
+    "chunkCount": 10,
+    "sourceFile": "mushroom-safety.md",
+    "fileSizeBytes": 42837,
+    "embeddingModelVersion": "all-MiniLM-L6-v2-r5",
+    "tier": "essential"
+  },
+  {
     "packId": "needles-and-sharps-handling",
     "packName": "Needles And Sharps Handling",
     "version": "1.0",

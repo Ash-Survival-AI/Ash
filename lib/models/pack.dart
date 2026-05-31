@@ -138,6 +138,7 @@ const _essentialPackIds = <String>{
   'cpr',
   'emergency-items',
   'fire',
+  'mushroom-safety',
   'wound',
 };
 
