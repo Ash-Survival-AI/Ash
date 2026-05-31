@@ -112,7 +112,8 @@ class Pack {
       glyph: packName.toUpperCase(),
       artFrom: colors.$1,
       artTo: colors.$2,
-      summary: '$packName emergency preparedness and response guide.',
+      summary: m['summary'] as String? ??
+          '$packName emergency preparedness and response guide.',
       size: sizeStr,
       bytes: fileBytes.toDouble(),
       version: m['version'] as String? ?? '1.0',
@@ -138,6 +139,7 @@ const _essentialPackIds = <String>{
   'cpr',
   'emergency-items',
   'fire',
+  'mushroom-safety',
   'wound',
 };
 

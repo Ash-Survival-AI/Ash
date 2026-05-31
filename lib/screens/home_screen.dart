@@ -14,6 +14,7 @@ class HomeScreen extends StatefulWidget {
     required this.chats,
     required this.onOpenChat,
     required this.onNew,
+    required this.onMushroomSafety,
     required this.onNewWithPrompt,
     required this.onDeleteChat,
     required this.onRenameChat,
@@ -24,6 +25,8 @@ class HomeScreen extends StatefulWidget {
   final List<Chat> chats;
   final ValueChanged<String> onOpenChat;
   final VoidCallback onNew;
+  final VoidCallback onMushroomSafety;
+
   /// Open a new chat with the composer pre-filled. Used by the empty-state
   /// example-prompt chips on a fresh install — tapping a chip drops the
   /// user into a new conversation with that question already typed, ready
@@ -282,6 +285,14 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+            child: _MushroomSafetyCta(
+              c: c,
+              onTap: widget.onMushroomSafety,
+            ),
+          ),
+
           // Search bar — only meaningful once the user has chats to
           // search through. On a fresh install (no chats, no query) the
           // empty-state prompts below own the screen instead.
@@ -531,6 +542,8 @@ class _EmptyStatePrompts extends StatelessWidget {
         'I\'m running out of water and there\'s no clean source nearby. What are my options?'),
     (Icons.thermostat_outlined, 'Hypothermia signs',
         'How do I tell if someone is getting hypothermia, and what should I do?'),
+    (Icons.forest_outlined, 'Wild mushroom safety',
+        'I found a wild mushroom. Help me assess the risk before anyone eats it.'),
   ];
 
   @override
@@ -573,6 +586,71 @@ class _EmptyStatePrompts extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _MushroomSafetyCta extends StatelessWidget {
+  const _MushroomSafetyCta({required this.c, required this.onTap});
+
+  final AshColors c;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Glass(
+          radius: 18,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: Colors.greenAccent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  Icons.forest_outlined,
+                  color: Colors.greenAccent.shade100,
+                  size: 19,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Mushroom safety',
+                      style: TextStyle(
+                        color: c.text,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Wild mushroom triage and poison guidance',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: c.textDim, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.arrow_forward_ios, color: c.textDim, size: 13),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

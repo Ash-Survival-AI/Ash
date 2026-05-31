@@ -1,0 +1,76 @@
+{
+  "packId": "mushroom-safety",
+  "packName": "Mushroom Safety",
+  "propositions": [
+    {
+      "question": "Can Ash tell me if a wild mushroom is edible from a photo?",
+      "answer": "No. A photo can help describe visible features, but it is not enough to confirm that a wild mushroom is safe to eat. Treat unknown wild mushrooms as unsafe until a qualified local mushroom expert identifies the actual specimen.\n\nDo not eat the mushroom based on an app, a field guide match, a single photo, taste, smell, color, or a computer vision suggestion. Many poisonous mushrooms resemble edible species.",
+      "sectionPath": "Mushroom Safety > Edibility",
+      "phase": "Response",
+      "audience": "Adults"
+    },
+    {
+      "question": "What should I do if someone ate a wild mushroom?",
+      "answer": "Call Poison Help at 1-800-222-1222 in the U.S., local poison control, or emergency services now. Do not wait for symptoms; some dangerous mushroom poisonings can begin with delayed illness.\n\nKeep the person safe and still. Do not make them vomit unless poison control or a clinician tells you to. Save photos of the mushroom, the place it grew, and any remaining pieces so experts have more evidence.",
+      "sectionPath": "Mushroom Safety > Ingestion",
+      "phase": "Response",
+      "audience": "Adults"
+    },
+    {
+      "question": "What should I do if a child ate a wild mushroom?",
+      "answer": "Call Poison Help at 1-800-222-1222 in the U.S. or local poison control immediately, even if the child seems fine. If the child has trouble breathing, repeated vomiting, confusion, seizures, severe pain, or is hard to wake, call emergency services.\n\nRemove any remaining pieces from the child's reach. Save the specimen or take clear photos of all parts of it and where it was found.",
+      "sectionPath": "Mushroom Safety > Children",
+      "phase": "Response",
+      "audience": "Kids"
+    },
+    {
+      "question": "What should I do if a pet ate a wild mushroom?",
+      "answer": "Call a veterinarian, emergency animal hospital, or animal poison control right away. Pets can become very sick from mushrooms, and waiting for symptoms can waste treatment time.\n\nMove the pet away from the mushrooms. Save a sample or photos of the cap, underside, stem, base, and growing area, and tell the veterinarian how much may have been eaten and when.",
+      "sectionPath": "Mushroom Safety > Pets",
+      "phase": "Response",
+      "audience": "Pets"
+    },
+    {
+      "question": "What symptoms after eating wild mushrooms need urgent help?",
+      "answer": "Get urgent poison-center or medical help for vomiting, diarrhea, severe stomach pain, sweating, drooling, confusion, hallucinations, extreme sleepiness, seizures, trouble breathing, yellow skin or eyes, dark urine, or symptoms that appear hours after the meal.\n\nDelayed symptoms can still be serious. Do not assume the person is safe because they felt okay at first.",
+      "sectionPath": "Mushroom Safety > Symptoms",
+      "phase": "Response",
+      "audience": "Adults"
+    },
+    {
+      "question": "Can cooking, peeling, drying, or tasting prove a mushroom is safe?",
+      "answer": "No. Cooking, peeling, drying, smell, taste, color change, and animal nibbling are not reliable safety tests. Some mushroom toxins can remain dangerous after ordinary cooking or drying.\n\nIf the mushroom is not confidently identified by a qualified expert, do not eat it.",
+      "sectionPath": "Mushroom Safety > Myths",
+      "phase": "Preparation",
+      "audience": "Adults"
+    },
+    {
+      "question": "What photos help experts identify a mushroom?",
+      "answer": "Take several clear photos before handling or discarding it:\n\n- Cap from above\n- Underside showing gills, pores, teeth, or folds\n- Full stem from top to base\n- Base dug up intact, including any cup, bulb, or volva\n- Ring, veil remnants, bruising, latex, or color changes\n- Multiple specimens at different ages, if present\n- Habitat, nearby trees, substrate, location, and date\n\nOne top-down photo is usually not enough.",
+      "sectionPath": "Mushroom Safety > Documentation",
+      "phase": "Response",
+      "audience": "Adults"
+    },
+    {
+      "question": "How should I save a mushroom sample after possible poisoning?",
+      "answer": "If it is safe to do so, save the remaining mushroom pieces and any cooked food that contained them. Keep them separate from food and away from children and pets. Use a paper bag or clean container if available, and follow poison control or clinician instructions.\n\nPhotograph the specimen and the growing site before moving it when possible.",
+      "sectionPath": "Mushroom Safety > Evidence",
+      "phase": "Response",
+      "audience": "Adults"
+    },
+    {
+      "question": "Which mushroom groups deserve extra caution?",
+      "answer": "Be especially cautious with mushrooms that could belong to deadly or severe-poisoning groups such as Amanita, Galerina, Lepiota, Cortinarius, and false morels. Small brown mushrooms, little white mushrooms, and immature puffball-like forms can be difficult to identify safely.\n\nThese names are warning categories, not an identification. Do not eat a mushroom because it seems to avoid one danger sign.",
+      "sectionPath": "Mushroom Safety > Lookalikes",
+      "phase": "Preparation",
+      "audience": "Adults"
+    },
+    {
+      "question": "How should Ash use a computer vision mushroom result?",
+      "answer": "Treat any computer vision result as a candidate for further checking, not as a safety decision. A model may confuse visually similar species, miss open-set species, or lack the location, season, habitat, substrate, odor, spore print, and microscopic details that experts use.\n\nAsh should explain uncertainty, ask for missing evidence, warn about lookalikes, and avoid saying the mushroom is edible.",
+      "sectionPath": "Mushroom Safety > Computer Vision",
+      "phase": "Response",
+      "audience": "Adults"
+    }
+  ]
+}

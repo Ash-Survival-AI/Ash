@@ -27,6 +27,7 @@ import 'services/inference_service.dart';
 // MessageSource is exported via inference_service.dart for the citation-chip
 // payload.
 import 'services/llm_model.dart';
+import 'services/mushroom_safety.dart';
 import 'services/voice_service.dart';
 import 'theme/ash_theme.dart';
 import 'widgets/tab_bar.dart' as ash;
@@ -793,6 +794,13 @@ class _AshAppState extends State<AshApp> {
     _kickOffWarmUpIfReady();
   }
 
+  void _handleNewMushroomSafetyChat() {
+    _handleNewChat(
+      lensPackIds: const {MushroomSafety.packId},
+      initialPrompt: MushroomSafety.starterPrompt,
+    );
+  }
+
   /// Snapshot of [chat.messages] for replay into the model when a fresh
   /// session is needed. Drops the just-added user prompt and the empty
   /// streaming placeholder so we don't replay the live turn into itself.
@@ -1468,6 +1476,7 @@ class _AshAppState extends State<AshApp> {
                             chats: _chats,
                             onOpenChat: _handleOpenChat,
                             onNew: () => _handleNewChat(),
+                            onMushroomSafety: _handleNewMushroomSafetyChat,
                             onNewWithPrompt: (prompt) =>
                                 _handleNewChat(initialPrompt: prompt),
                             onDeleteChat: _handleDeleteChat,

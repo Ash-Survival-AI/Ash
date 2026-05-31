@@ -14,6 +14,7 @@ import 'chunk_sanitizer.dart';
 import 'inference_service.dart';
 import 'inference_settings.dart';
 import 'llm_model.dart';
+import 'mushroom_safety.dart';
 import '../objectbox.g.dart';
 
 /// Simple data class for a retrieved RAG chunk.
@@ -47,6 +48,11 @@ class RetrievedInfo {
 /// generation. Adapts the FlutterGemmaRagService from gemma4_bench into Ash's
 /// simpler InferenceService interface.
 class GemmaInferenceService implements InferenceService {
+  GemmaInferenceService({
+    MushroomVisionAnalyzer? mushroomVisionAnalyzer,
+  }) : _mushroomVisionAnalyzer =
+            mushroomVisionAnalyzer ?? const INaturalistMushroomVisionAnalyzer();
+
   // --- Constants ---
 
   /// Default variant used when nothing else is selected — first-run install
@@ -194,6 +200,7 @@ class GemmaInferenceService implements InferenceService {
   // source blocks like "[1] CPR — During > For Adults" without forcing the
   // caller to thread pack metadata through the service interface.
   final Map<String, String> _packIdToName = {};
+  final MushroomVisionAnalyzer _mushroomVisionAnalyzer;
 
   // --- InferenceService interface ---
 
@@ -674,19 +681,49 @@ class GemmaInferenceService implements InferenceService {
     _stopRequested = false;
 
     final usesImage = imageBytes != null;
+    final mushroomLensActive =
+        _lensPackIds?.contains(MushroomSafety.packId) ?? false;
+    final mushroomSafetyMode = MushroomSafety.shouldActivate(
+      prompt: prompt,
+      usesImage: usesImage,
+      lensActive: mushroomLensActive,
+    );
     debugPrint('[ash] query start: chatId=$chatId image=$usesImage '
         'promptLen=${prompt.length} rag=${settings.useRag} '
         'temp=${settings.temperature} topK=${settings.topK} '
         'topP=${settings.topP} maxTok=${settings.maxTokens} '
-        'backend=$_accelerator');
+        'backend=$_accelerator mushroomSafety=$mushroomSafetyMode');
 
     try {
       String fullPrompt;
       List<MessageSource> sources = const [];
+      MushroomVisionFinding? mushroomVisionFinding;
+      if (mushroomSafetyMode && usesImage) {
+        try {
+          mushroomVisionFinding =
+              await _mushroomVisionAnalyzer.analyze(imageBytes);
+        } catch (e) {
+          debugPrint('[ash] mushroom vision analyzer failed: $e');
+          mushroomVisionFinding = const MushroomVisionFinding(
+            modelName: 'error',
+            modelAvailable: false,
+            observations: ['The mushroom vision analyzer failed to run.'],
+            limitations: [
+              'Do not infer edibility, toxicity, or species certainty from this tool.',
+            ],
+          );
+        }
+      }
       if (usesImage || !settings.useRag) {
         // Image queries skip RAG (context budget) and the user can also
         // disable RAG entirely via settings.
-        fullPrompt = prompt;
+        fullPrompt = mushroomSafetyMode
+            ? MushroomSafety.augmentPrompt(
+                prompt: prompt,
+                usesImage: usesImage,
+                visionFinding: mushroomVisionFinding,
+              )
+            : prompt;
       } else {
         await _ensureDb();
         // Pass 1: embed the raw user prompt and retrieve.
@@ -748,14 +785,21 @@ class GemmaInferenceService implements InferenceService {
         debugPrint('[ash] final retrieved ${retrieved.length} chunks');
         final assembled = _assembleContext(retrieved, prompt);
         sources = assembled.sources;
+        final answerPrompt = mushroomSafetyMode
+            ? MushroomSafety.augmentPrompt(
+                prompt: prompt,
+                usesImage: false,
+              )
+            : prompt;
         // Soft framing: context first, then the user message verbatim. We
         // intentionally do NOT add a "User:" prefix — the Gemma 4 chat
         // template already wraps this whole string as a `<start_of_turn>user`
         // block, so an inner "User:" would be a duplicate role marker and
         // tends to confuse the model (truncated / off-topic replies). The
         // system instruction tells the model when to use the material.
-        fullPrompt =
-            assembled.text.isEmpty ? prompt : '${assembled.text}\n\n$prompt';
+        fullPrompt = assembled.text.isEmpty
+            ? answerPrompt
+            : '${assembled.text}\n\n$answerPrompt';
       }
 
       // Build system prompt based on (a) whether RAG is enabled, (b) the
@@ -769,6 +813,7 @@ class GemmaInferenceService implements InferenceService {
         useRag: settings.useRag,
         liveMode: liveMode,
         usesImage: usesImage,
+        mushroomSafetyMode: mushroomSafetyMode,
       );
 
       final chat = await _prepareSession(
@@ -1667,12 +1712,19 @@ class GemmaInferenceService implements InferenceService {
     required bool useRag,
     bool liveMode = false,
     bool usesImage = false,
+    bool mushroomSafetyMode = false,
   }) {
-    if (usesImage && liveMode) return _liveVisionSystemPrompt;
-    if (usesImage) return _visionSystemPrompt;
-    if (liveMode) return _liveVoiceSystemPrompt;
-    if (!useRag) return _generalSystemPrompt;
-    return _ragAwareSystemPrompt;
+    final basePrompt = () {
+      if (usesImage && liveMode) return _liveVisionSystemPrompt;
+      if (usesImage) return _visionSystemPrompt;
+      if (liveMode) return _liveVoiceSystemPrompt;
+      if (!useRag) return _generalSystemPrompt;
+      return _ragAwareSystemPrompt;
+    }();
+    if (!mushroomSafetyMode) return basePrompt;
+    final rules =
+        liveMode ? MushroomSafety.liveSystemRules : MushroomSafety.systemRules;
+    return '$basePrompt\n\n$rules';
   }
 
   static const _generalSystemPrompt =
@@ -1705,7 +1757,8 @@ class GemmaInferenceService implements InferenceService {
       'you actually see. Be specific about details in the image — colors, '
       'objects, people, text, hazards. Keep your answer focused and '
       'practical. If the image doesn\'t contain enough information to '
-      'answer, say so honestly.';
+      'answer, say so honestly.'
+      '${MushroomSafety.visionSystemAddendum}';
 
   /// Image queries + live voice mode. Same visual focus, but reply must
   /// be TTS-friendly (short prose, no markdown).
@@ -1713,7 +1766,8 @@ class GemmaInferenceService implements InferenceService {
       'You are Ash, speaking aloud about an image the user shared. Look at '
       'the image carefully. Describe what you see and answer the user\'s '
       'question in 1–3 sentences. Plain spoken prose only — no markdown, '
-      'no emoji, no lists. Be specific about what\'s actually in the image.';
+      'no emoji, no lists. Be specific about what\'s actually in the image.'
+      '${MushroomSafety.visionSystemAddendum}';
 
   /// Live voice mode: the user hears the reply read aloud. Every markdown
   /// marker (`**bold**`, `### heading`, bullets, numbered lists) becomes
