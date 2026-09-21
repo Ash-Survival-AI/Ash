@@ -1,17 +1,11 @@
 # App Store Connect submission copy — Ash
 
 This is the copy-paste source for App Store Connect. Every field below has
-been length-checked against Apple's limits with `wc -c` (Step 3) — do not
+been length-checked against Apple's limits with `wc -c` (Step 2) — do not
 retype these strings by hand into ASC; copy them directly to avoid
 reintroducing a length or formatting error.
 
 Version under submission: **1.5.0 (build 9)**, minimum iOS 16.
-
-> **Note on version numbers:** `pubspec.yaml` in this repo currently still
-> reads `1.4.0+8` at the time this document was written. Bumping it to
-> `1.5.0+9` is a build/release-config change, not a documentation change, and
-> is out of scope for this document — confirm it has been bumped (or bump it)
-> before archiving the build that gets uploaded.
 
 > **Correction (this revision): new App Store Connect record, new team.**
 > An earlier draft of this document assumed bundle ID `com.yunxiang.ash`,
@@ -61,11 +55,14 @@ packs covering first aid, severe bleeding, CPR, hypothermia, flash floods,
 and dozens of other field situations — with inline citations you can tap to
 read the exact source passage.
 
-Once the model is downloaded, Ash needs no signal at all. Turn on Airplane
-Mode and it keeps working: no cell service, no Wi-Fi, no cloud calls for
-chat, image, or knowledge-pack lookups. This makes it a genuinely useful
-companion in the backcountry, during a power outage, or anywhere else
-connectivity can't be assumed. Note: Ash does require an internet
+Once the model is downloaded, Ash needs no signal for typed or camera
+questions. Turn on Airplane Mode and it keeps working: no cell service, no
+Wi-Fi, no cloud calls for chat, image, or knowledge-pack lookups. Voice is
+the one exception — Apple's Speech Recognition may need network access to
+transcribe speech if you haven't downloaded an on-device language pack, so
+type or use the camera to test fully offline. This makes it a genuinely
+useful companion in the backcountry, during a power outage, or anywhere
+else connectivity can't be assumed. Note: Ash does require an internet
 connection once, on first launch, to download its AI model — see below.
 
 Three ways to ask:
@@ -104,17 +101,21 @@ trademark of Google LLC.
 survival,offline,first aid,wilderness,emergency,AI,assistant,preparedness,camping,no signal
 ```
 
-Length: **91 / 100** characters (verified with `wc -c`, see Step 3 below).
+Length: **91 / 100** characters (verified with `wc -c`, see Step 2 below).
 
 ---
 
 ## Promotional Text
 
 ```
-Offline survival AI with first-aid guidance, ID, and voice chat, all on-device. First launch needs Wi-Fi for a ~1.4 GB model. Not a substitute for emergency services.
+Offline survival AI: first-aid guidance, ID, and voice chat. AI runs on-device. First launch needs Wi-Fi for a ~1.4 GB model. Not a substitute for emergency services.
 ```
 
-Length: **166 / 170** characters (verified with `wc -c`, see Step 3 below).
+Length: **166 / 170** characters (verified with `wc -c`, see Step 2 below). The
+on-device claim attaches to the AI, not to voice — voice transcription can
+route through Apple's servers (see the App Privacy section below and
+`lib/services/apple_voice_service.dart`), so it can't share the "all
+on-device" claim.
 
 ---
 
@@ -161,17 +162,18 @@ up front.
 
 A safety disclaimer is presented on first launch and must be acknowledged
 before the app can be used. It remains available afterwards in Settings
-under "Safety & limitations," alongside the in-app privacy summary.
+under "Safety & limitations." Settings also has a "Privacy policy" row that
+opens our privacy policy in the browser; there is no separate in-app privacy
+summary screen.
 
 One accuracy note for the reviewer: voice input is transcribed using
-Apple's on-device Speech Recognition framework. Depending on the reviewer's
-device and installed language packs, iOS may route some speech-to-text
-processing to Apple's own servers rather than performing it fully
-on-device — this is standard iOS behavior for the Speech framework, not
-something Ash controls or opts into. Ash itself never transmits audio,
-conversations, images, or any other user content to our own servers; the
-only outbound app traffic is the one-time model (and knowledge-pack)
-download from Hugging Face.
+Apple's Speech Recognition framework. Depending on the reviewer's device and
+installed language packs, iOS may route some speech-to-text processing to
+Apple's own servers rather than performing it fully on-device — this is
+standard iOS behavior for the Speech framework, not something Ash controls
+or opts into. Ash itself never transmits audio, conversations, images, or
+any other user content to our own servers; the only outbound app traffic is
+the one-time model (and knowledge-pack) download from Hugging Face.
 ```
 
 ---
@@ -277,7 +279,7 @@ is on-device.
 
 ---
 
-## Step 3: Length verification (real `wc -c` output)
+## Step 2: Length verification (real `wc -c` output)
 
 ```
 $ printf '%s' "Offline AI survival guide" | wc -c
@@ -292,7 +294,7 @@ $ printf '%s' "survival,offline,first aid,wilderness,emergency,AI,assistant,prep
 Keywords: 91 / 100 — OK.
 
 ```
-$ printf '%s' "Offline survival AI with first-aid guidance, ID, and voice chat, all on-device. First launch needs Wi-Fi for a ~1.4 GB model. Not a substitute for emergency services." | wc -c
+$ printf '%s' "Offline survival AI: first-aid guidance, ID, and voice chat. AI runs on-device. First launch needs Wi-Fi for a ~1.4 GB model. Not a substitute for emergency services." | wc -c
      166
 ```
 Promotional text: 166 / 170 — OK.

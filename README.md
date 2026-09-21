@@ -2,7 +2,7 @@
 
 # Ash
 
-**Offline survival assistant for iOS.** Gemma 4 (E2B or E4B) runs fully on-device — text, image, and voice — so it works when there's no signal.
+**Offline survival assistant for iOS.** Gemma 4 (E2B or E4B) runs fully on-device for text and image — so it works when there's no signal. Voice input uses Apple's Speech Recognition, which can fall back to Apple's servers if you haven't downloaded an on-device language pack.
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Platform: iOS 16+](https://img.shields.io/badge/Platform-iOS%2016+-lightgrey.svg)](https://www.apple.com/os/ios/)
@@ -24,8 +24,12 @@
 The fastest path is TestFlight — no Xcode, no cables, no signing.
 
 > **TestFlight invite:** **<https://testflight.apple.com/join/z5vsJM8A>**
-> Requires iPhone 15 Pro or newer on iOS 16+ and a Wi-Fi connection
-> (~1.4 GB for E2B or ~3.7 GB for E4B on first launch).
+> Note: this invite is for an earlier TestFlight build published under the
+> previous bundle ID (`com.yunxiang.ash`), before the app moved to
+> `com.yaoxiao.ash` for App Store submission — it may be retired once the
+> App Store release ships. Requires an iPhone 15 Pro or newer, iOS 16 or
+> later, and a Wi-Fi connection (~1.4 GB for E2B or ~3.7 GB for E4B on
+> first launch).
 > Tap the link on your iPhone — iOS will prompt to install Apple's
 > TestFlight app if you don't have it, then offer the Ash beta.
 

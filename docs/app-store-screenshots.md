@@ -50,7 +50,8 @@ iOS 26.4 (26.4.1 - 23E254a) - com.apple.CoreSimulator.SimRuntime.iOS-26-4
 ```
 
 Only **one runtime, iOS 26.4,** is installed on this machine. That's fine —
-iOS 26.4 satisfies iOS 17+ minimum for every device type discussed below.
+iOS 26.4 satisfies the app's iOS 16+ minimum for every device type discussed
+below.
 
 ```
 $ xcrun simctl list devices available
