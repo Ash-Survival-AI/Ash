@@ -215,7 +215,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _buildRow(
                         c,
                         label: 'Version',
-                        value: '1.4.0',
+                        value: '1.5.0',
                       ),
                     ],
                   ),
