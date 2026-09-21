@@ -67,3 +67,6 @@ __pycache__/
 TEST_PLAN*.md
 ASH_TECHNICAL_DOC.md
 APP_REVIEW_FORM*.md
+
+# Superpowers SDD scratch (ledger, briefs, review packages)
+.superpowers/
