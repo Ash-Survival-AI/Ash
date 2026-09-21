@@ -57,4 +57,33 @@ void main() {
     await tester.pumpAndSettle();
     expect(dismissed, isTrue);
   });
+
+  testWidgets('review mode still states the three required safety points',
+      (tester) async {
+    await tester.pumpWidget(host(
+      SafetyDisclaimerScreen(onAccept: () {}, isReview: true),
+    ));
+
+    final text = tester
+        .widgetList<Text>(find.byType(Text))
+        .map((w) => w.data ?? '')
+        .join(' ');
+
+    // Review mode (opened from Settings) omits the acknowledgement
+    // checkbox entirely, so the lowercase "not a substitute" phrase —
+    // which lives only in the checkbox label's "I understand Ash is not
+    // a substitute for professional or emergency help." — is genuinely
+    // absent here. The card title "Not a substitute for professional
+    // care" is the semantic equivalent that IS shown in review mode, but
+    // it is capitalized, so it does not satisfy a case-sensitive
+    // `contains('not a substitute')` check.
+    expect(text, contains('Not a substitute for professional care'));
+    expect(text, contains('emergency services'));
+    expect(text, contains('can be wrong'));
+
+    // Documents the real content-parity gap: unlike the first-launch
+    // flow, review mode never renders the exact lowercase phrase
+    // "not a substitute" anywhere (case-sensitive).
+    expect(text.contains('not a substitute'), isFalse);
+  });
 }
