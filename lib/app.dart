@@ -409,6 +409,21 @@ class _AshAppState extends State<AshApp> {
     return false;
   }
 
+  /// `onAccept` callback for [SafetyDisclaimerScreen]. Records acceptance,
+  /// then routes to Main if a model is already on disk, or ModelPick
+  /// otherwise. Without this check, a returning user who already has a
+  /// model installed (e.g. re-accepting after an app-upgrade path that
+  /// re-shows the disclaimer) would be forced back through ModelPick —
+  /// which has no back/continue affordance, so picking a variant there
+  /// kicks off a fresh 1.4/3.7 GB download even though one is already
+  /// installed.
+  Future<void> _handleDisclaimerAccepted() async {
+    await _markDisclaimerAccepted();
+    final hasModel = await _anyModelOnDisk();
+    if (!mounted) return;
+    _setStage(hasModel ? AppStage.main : AppStage.modelPick);
+  }
+
   Future<void> _markOnboardingDone() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -1349,10 +1364,7 @@ class _AshAppState extends State<AshApp> {
               },
             ),
           AppStage.disclaimer => SafetyDisclaimerScreen(
-              onAccept: () {
-                _markDisclaimerAccepted();
-                _setStage(AppStage.modelPick);
-              },
+              onAccept: _handleDisclaimerAccepted,
             ),
           AppStage.modelPick => ModelPickScreen(
               onSelect: (model) {
