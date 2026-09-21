@@ -26,6 +26,27 @@ Version under submission: **1.5.0 (build 9)**, minimum iOS 16.
 > ID — its testers do **not** carry over and must be re-invited under the
 > new app record.
 
+> **PREREQUISITE — do this before submitting, or Apple will reject on
+> Guideline 5.1.1(i):** the Privacy Policy URL below now points at the
+> shared org repo, `Ash-Survival-AI/Ash`, not a personal namespace. The
+> old host (`raccoononion.github.io`) is dead — a personal GitHub Pages
+> custom domain on a collaborator's account captures the entire
+> `raccoononion.github.io` namespace and 301-redirects it to a page that
+> 404s, and that cannot be fixed by enabling Pages on the old repo. Before
+> submitting:
+>
+> 1. On `Ash-Survival-AI/Ash`, enable **Settings → Pages → Source: Deploy
+>    from a branch, Branch: `main`, folder `/docs`**.
+> 2. Confirm `docs/privacy-policy.html` is present on that repo's `main`
+>    branch.
+> 3. Verify the live URL before entering it in App Store Connect:
+>    ```
+>    curl -sIL https://ash-survival-ai.github.io/Ash/privacy-policy.html | grep -i '^HTTP'
+>    ```
+>    This must return a bare `200` with **no** `301` hop. Note the capital
+>    `A` in `/Ash/` — GitHub Pages project-site paths are case-sensitive,
+>    and `/ash/` (lowercase) 404s.
+
 ---
 
 ## App Information
@@ -36,7 +57,7 @@ Version under submission: **1.5.0 (build 9)**, minimum iOS 16.
 | Subtitle | `Offline AI survival guide` |
 | Primary category | `Reference` |
 | Secondary category | `Utilities` |
-| Privacy Policy URL | `https://raccoononion.github.io/ash/privacy-policy.html` |
+| Privacy Policy URL | `https://ash-survival-ai.github.io/Ash/privacy-policy.html` |
 | Support URL | `https://github.com/RaccoonOnion/ash/issues` |
 | Marketing URL | `https://github.com/RaccoonOnion/ash` |
 

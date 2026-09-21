@@ -573,8 +573,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _openPrivacyPolicy() async {
-    final uri =
-        Uri.parse('https://raccoononion.github.io/ash/privacy-policy.html');
+    final uri = Uri.parse(
+        'https://ash-survival-ai.github.io/Ash/privacy-policy.html');
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
