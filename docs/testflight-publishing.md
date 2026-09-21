@@ -1,11 +1,28 @@
 # TestFlight publishing — verified workflow
 
-Step-by-step for shipping a new build of `com.yunxiang.ash` to TestFlight.
-Captured 2026-05-18 after walking through it end-to-end on a fresh
-Apple Distribution cert under team `DJD849Y8Q6` (Yunxiang Yan).
+> **Update: App Store submission now proceeds under a different identity.**
+> As of this revision, the app builds and submits under bundle ID
+> `com.yaoxiao.ash` and team `V9Q67SYWWQ` (Yao Xiao) — **not**
+> `com.yunxiang.ash` / `DJD849Y8Q6` referenced throughout the walkthrough
+> below. That walkthrough is kept as-is for historical provenance (it was
+> captured 2026-05-18 and verified end-to-end under the other team), but
+> every *actionable* value a reader would copy-paste — the App ID, the App
+> Store Connect record fields, and the `TEAM_ID=` / `SIGNING_IDENTITY=`
+> env vars in the framework-fix step — has been updated below to the
+> current identity so following this runbook today does not paste the
+> wrong bundle ID or team. Because the bundle ID changed, this is a
+> **brand-new App Store Connect app record**; the existing TestFlight app
+> under `com.yunxiang.ash` and its testers do not carry over.
 
-The collaborator (Yao Xiao, team `V9Q67SYWWQ`) has a parallel setup;
-the framework fix script supports both via env-var overrides.
+Step-by-step for shipping a new build of `com.yaoxiao.ash` to TestFlight.
+Originally captured 2026-05-18 after walking through it end-to-end on a
+fresh Apple Distribution cert under team `DJD849Y8Q6` (Yunxiang Yan);
+updated for team `V9Q67SYWWQ` (Yao Xiao), which now owns the App Store
+submission.
+
+The other developer (Yunxiang Yan, team `DJD849Y8Q6`) has a parallel
+setup under the original bundle ID; the framework fix script supports
+both via env-var overrides.
 
 ---
 
@@ -22,7 +39,8 @@ Active membership required (currently $99/yr). Verify at
 ### 2. App ID registered
 
 <https://developer.apple.com/account/resources/identifiers/list> →
-look for `com.yunxiang.ash`. If absent, create it: **+ → App IDs →
+look for `com.yaoxiao.ash` (was `com.yunxiang.ash` under the other
+developer's team). If absent, create it: **+ → App IDs →
 App → Explicit**. Enable these capabilities (without them, vision
 inference SIGKILLs silently mid-`engine_create` from iOS Jetsam):
 
@@ -53,7 +71,7 @@ You should see `Apple Distribution: <Your Name> (<TEAM_ID>)`.
 | Platforms | iOS only |
 | Name | Ash: Survival AI |
 | Primary Language | English (U.S.) |
-| Bundle ID | `com.yunxiang.ash` (must appear in dropdown — depends on step 2) |
+| Bundle ID | `com.yaoxiao.ash` (must appear in dropdown — depends on step 2) |
 | SKU | `ash-001` (any unique string) |
 | User Access | Full Access |
 
@@ -129,13 +147,15 @@ Otherwise:
 ### I. Patch + re-sign + re-export
 
 ```bash
-TEAM_ID=DJD849Y8Q6 \
-SIGNING_IDENTITY="Apple Distribution: Yunxiang Yan (DJD849Y8Q6)" \
+TEAM_ID=V9Q67SYWWQ \
+SIGNING_IDENTITY="Apple Distribution: Yao Xiao (V9Q67SYWWQ)" \
 ./ios/fix_framework_plists.sh
 ```
 
-(For the collaborator's setup the defaults work — just run
-`./ios/fix_framework_plists.sh`.)
+(This was originally documented as `TEAM_ID=DJD849Y8Q6` /
+`SIGNING_IDENTITY="Apple Distribution: Yunxiang Yan (DJD849Y8Q6)"` for
+the other developer's setup — that still works for their team via the
+same env-var overrides.)
 
 The script:
 
@@ -165,7 +185,7 @@ suitable application records were found"*: the App Store Connect
 record (one-time-setup step 4) doesn't exist yet, or you're signed
 into Transporter with an Apple ID that doesn't have access to that
 team's apps. The Apple ID in Transporter's top-right must match a
-user with access to the team that owns `com.yunxiang.ash`.
+user with access to the team that owns `com.yaoxiao.ash`.
 
 **Xcode Organizer**: Window → Organizer → Archives → select today's
 build → Distribute App → App Store Connect → Upload. Walks through
@@ -219,7 +239,7 @@ App Store Connect → app → TestFlight tab:
    TestFlight app.
 3. Tap **Install**. The 140 MB IPA downloads.
 4. First launch: the app downloads the Gemma `.litertlm` from
-   HuggingFace (~2.5 GB for E2B, ~5 GB for E4B). Tester needs Wi-Fi.
+   HuggingFace (~1.4 GB for E2B, ~3.7 GB for E4B). Tester needs Wi-Fi.
 
 ---
 
@@ -275,8 +295,8 @@ After all one-time setup is in place:
 flutter build ipa --release --export-method=app-store
 
 # 3. Patch frameworks (use your team's env vars)
-TEAM_ID=DJD849Y8Q6 \
-SIGNING_IDENTITY="Apple Distribution: Yunxiang Yan (DJD849Y8Q6)" \
+TEAM_ID=V9Q67SYWWQ \
+SIGNING_IDENTITY="Apple Distribution: Yao Xiao (V9Q67SYWWQ)" \
 ./ios/fix_framework_plists.sh
 
 # 4. Upload — drag build/ios/ipa-fixed/ash.ipa into Transporter

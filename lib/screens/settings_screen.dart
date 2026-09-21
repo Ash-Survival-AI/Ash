@@ -7,6 +7,7 @@ import '../theme/ash_theme.dart';
 import '../widgets/glass.dart';
 import '../widgets/buttons.dart';
 import '../widgets/chips.dart';
+import 'safety_disclaimer_screen.dart';
 
 /// Full settings page (pushed on top, not a tab). Sampling/RAG knobs are
 /// per-conversation and live in the chat header's tune icon, NOT here. The
@@ -192,6 +193,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       _buildRow(
                         c,
+                        label: 'Safety & limitations',
+                        chevron: true,
+                        onTap: _openSafetyDisclaimer,
+                      ),
+                      _divider(c),
+                      _buildRow(
+                        c,
+                        label: 'Privacy policy',
+                        chevron: true,
+                        onTap: _openPrivacyPolicy,
+                      ),
+                      _divider(c),
+                      _buildRow(
+                        c,
                         label: 'View on GitHub',
                         chevron: true,
                         onTap: _openGitHub,
@@ -200,7 +215,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _buildRow(
                         c,
                         label: 'Version',
-                        value: '1.4.0',
+                        value: '1.5.0',
                       ),
                     ],
                   ),
@@ -555,6 +570,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
         const SnackBar(content: Text('Could not open browser')),
       );
     }
+  }
+
+  void _openPrivacyPolicy() async {
+    final uri = Uri.parse(
+        'https://ash-survival-ai.github.io/Ash/privacy-policy.html');
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open browser')),
+      );
+    }
+  }
+
+  void _openSafetyDisclaimer() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => SafetyDisclaimerScreen(
+          isReview: true,
+          onAccept: () => Navigator.of(context).pop(),
+        ),
+      ),
+    );
   }
 
   /// MTP / speculative-decoding row. Boolean switch with a sublabel that

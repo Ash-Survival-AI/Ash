@@ -13,6 +13,7 @@ import 'models/pack.dart';
 import 'services/context_estimator.dart';
 import 'services/model_download_state.dart';
 import 'screens/onboarding_screen.dart';
+import 'screens/safety_disclaimer_screen.dart';
 import 'screens/model_pick_screen.dart';
 import 'screens/model_download_screen.dart';
 import 'screens/home_screen.dart';
@@ -369,6 +370,18 @@ class _AshAppState extends State<AshApp> {
       final prefs = await SharedPreferences.getInstance();
       final done = prefs.getBool(_kPrefOnboardingDone) ?? false;
       if (!done || !mounted) return;
+
+      // Carousel seen. The disclaimer is a separate, non-skippable gate:
+      // users upgrading from a build that predates it have the onboarding
+      // flag but not the acceptance flag, and must still acknowledge.
+      final accepted =
+          prefs.getBool(kPrefSafetyDisclaimerAccepted) ?? false;
+      if (!accepted) {
+        if (!mounted) return;
+        setState(() => _stage = AppStage.disclaimer);
+        return;
+      }
+
       // The user has seen the carousel. Decide where to land based on
       // whether a model is on disk. _refreshInstalledLlmModels() is
       // async and may not have finished yet — poke the service
@@ -396,12 +409,36 @@ class _AshAppState extends State<AshApp> {
     return false;
   }
 
+  /// `onAccept` callback for [SafetyDisclaimerScreen]. Records acceptance,
+  /// then routes to Main if a model is already on disk, or ModelPick
+  /// otherwise. Without this check, a returning user who already has a
+  /// model installed (e.g. re-accepting after an app-upgrade path that
+  /// re-shows the disclaimer) would be forced back through ModelPick —
+  /// which has no back/continue affordance, so picking a variant there
+  /// kicks off a fresh 1.4/3.7 GB download even though one is already
+  /// installed.
+  Future<void> _handleDisclaimerAccepted() async {
+    await _markDisclaimerAccepted();
+    final hasModel = await _anyModelOnDisk();
+    if (!mounted) return;
+    _setStage(hasModel ? AppStage.main : AppStage.modelPick);
+  }
+
   Future<void> _markOnboardingDone() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_kPrefOnboardingDone, true);
     } catch (e) {
       debugPrint('[ash] mark onboarding done failed: $e');
+    }
+  }
+
+  Future<void> _markDisclaimerAccepted() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(kPrefSafetyDisclaimerAccepted, true);
+    } catch (e) {
+      debugPrint('[ash] mark disclaimer accepted failed: $e');
     }
   }
 
@@ -1323,8 +1360,11 @@ class _AshAppState extends State<AshApp> {
           AppStage.onboarding => OnboardingScreen(
               onDone: () {
                 _markOnboardingDone();
-                _setStage(AppStage.modelPick);
+                _setStage(AppStage.disclaimer);
               },
+            ),
+          AppStage.disclaimer => SafetyDisclaimerScreen(
+              onAccept: _handleDisclaimerAccepted,
             ),
           AppStage.modelPick => ModelPickScreen(
               onSelect: (model) {
