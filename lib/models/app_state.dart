@@ -1,2 +1,2 @@
-enum AppStage { onboarding, modelPick, downloading, main }
+enum AppStage { onboarding, disclaimer, modelPick, downloading, main }
 enum MainTab { home, knowledge, models, profile }
