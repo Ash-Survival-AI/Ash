@@ -58,7 +58,7 @@
 	<key>NSCameraUsageDescription</key>
 	<string>Ash needs camera access to identify plants, animals, and survival situations.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Ash uses the microphone to transcribe your voice questions on-device.</string>
+	<string>Ash uses the microphone to transcribe your voice questions into text.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Ash uses Apple Speech Recognition to convert your voice to text for the chat.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
