@@ -219,7 +219,7 @@ App Store Connect → app → TestFlight tab:
    TestFlight app.
 3. Tap **Install**. The 140 MB IPA downloads.
 4. First launch: the app downloads the Gemma `.litertlm` from
-   HuggingFace (~2.5 GB for E2B, ~5 GB for E4B). Tester needs Wi-Fi.
+   HuggingFace (~1.4 GB for E2B, ~3.7 GB for E4B). Tester needs Wi-Fi.
 
 ---
 
