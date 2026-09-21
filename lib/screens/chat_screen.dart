@@ -15,6 +15,7 @@ import '../widgets/buttons.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/composer_attachment.dart';
 import '../widgets/lens_sheet.dart';
+import '../widgets/safety_note.dart';
 
 /// Active conversation screen with real on-device inference.
 class ChatScreen extends StatefulWidget {
@@ -851,6 +852,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
               ),
               ),
+              const SafetyNote(),
             ],
           ),
         ),
