@@ -5,13 +5,32 @@ been length-checked against Apple's limits with `wc -c` (Step 3) — do not
 retype these strings by hand into ASC; copy them directly to avoid
 reintroducing a length or formatting error.
 
-Version under submission: **1.5.0 (build 9)**, minimum iOS 17.
+Version under submission: **1.5.0 (build 9)**, minimum iOS 16.
 
 > **Note on version numbers:** `pubspec.yaml` in this repo currently still
 > reads `1.4.0+8` at the time this document was written. Bumping it to
 > `1.5.0+9` is a build/release-config change, not a documentation change, and
 > is out of scope for this document — confirm it has been bumped (or bump it)
 > before archiving the build that gets uploaded.
+
+> **Correction (this revision): new App Store Connect record, new team.**
+> An earlier draft of this document assumed bundle ID `com.yunxiang.ash`,
+> team `DJD849Y8Q6` (Yunxiang Yan), and minimum iOS 17 — all three were
+> wrong, taken from an older runbook and a README badge rather than the
+> Xcode project. The actual values, verified in
+> `ios/Runner.xcodeproj/project.pbxproj`, are:
+>
+> - Bundle ID: **`com.yaoxiao.ash`**
+> - Development team: **`V9Q67SYWWQ`** (Yao Xiao)
+> - Minimum iOS: **16.0**
+>
+> Because the bundle ID differs from the one used for the existing
+> TestFlight build (`com.yunxiang.ash`), this submission requires a
+> **brand-new App Store Connect app record** under team `V9Q67SYWWQ`. The
+> existing TestFlight app and its public invite link
+> (<https://testflight.apple.com/join/z5vsJM8A>) belong to the other bundle
+> ID — its testers do **not** carry over and must be re-invited under the
+> new app record.
 
 ---
 

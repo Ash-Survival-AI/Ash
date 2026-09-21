@@ -5,7 +5,7 @@
 **Offline survival assistant for iOS.** Gemma 4 (E2B or E4B) runs fully on-device — text, image, and voice — so it works when there's no signal.
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![Platform: iOS 17+](https://img.shields.io/badge/Platform-iOS%2017+-lightgrey.svg)](https://www.apple.com/os/ios/)
+[![Platform: iOS 16+](https://img.shields.io/badge/Platform-iOS%2016+-lightgrey.svg)](https://www.apple.com/os/ios/)
 [![Flutter](https://img.shields.io/badge/Flutter-3.6+-02569B.svg?logo=flutter)](https://flutter.dev)
 [![Gemma 4](https://img.shields.io/badge/Model-Gemma%204%20E2B%20%2F%20E4B-4285F4.svg)](https://huggingface.co/litert-community)
 
@@ -24,7 +24,7 @@
 The fastest path is TestFlight — no Xcode, no cables, no signing.
 
 > **TestFlight invite:** **<https://testflight.apple.com/join/z5vsJM8A>**
-> Requires iPhone 15 Pro or newer on iOS 17+ and a Wi-Fi connection
+> Requires iPhone 15 Pro or newer on iOS 16+ and a Wi-Fi connection
 > (~1.4 GB for E2B or ~3.7 GB for E4B on first launch).
 > Tap the link on your iPhone — iOS will prompt to install Apple's
 > TestFlight app if you don't have it, then offer the Ash beta.
@@ -195,7 +195,7 @@ want to modify it.
 - A **paid Apple Developer team** (free profiles can't sign the multimodal
   engine — without the memory entitlements, iOS Jetsam silently kills the
   vision encoder during load)
-- An **iPhone 15 Pro / 16 Pro / 17** on iOS 17 or newer (A17 chip or
+- An **iPhone 15 Pro / 16 Pro / 17** on iOS 16 or newer (A17 chip or
   better for usable vision latency)
 - USB cable for the first run (over-the-air flutter run works after pairing,
   but the first install needs a wired session)
